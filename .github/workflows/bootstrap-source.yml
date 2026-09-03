@@ -1,0 +1,38 @@
+name: Bootstrap complete LittleNet source
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'LittleNet-complete-release.tar.xz'
+      - '.github/workflows/bootstrap-source.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  expand-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Expand sanitized LittleNet source
+        run: |
+          tar -xJf LittleNet-complete-release.tar.xz
+          rm -f LittleNet-complete-release.tar.xz
+          rm -f .github/workflows/bootstrap-source.yml
+
+      - name: Commit expanded source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Add complete sanitized LittleNet source'
+          git push origin HEAD:main
