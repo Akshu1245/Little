@@ -1,0 +1,45 @@
+name: Expand complete LittleNet source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.bootstrap2/**'
+      - '.github/workflows/bootstrap2-source.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  expand-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reassemble and verify sanitized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap2/source.part*.b64 | base64 -d > /tmp/littlenet-source.tar.xz
+          echo "0cffd731f6f957e7eca49ae0724a3ce5cddd1281c808d81c9d6c1279c3f8808a  /tmp/littlenet-source.tar.xz" | sha256sum -c -
+          xz -t /tmp/littlenet-source.tar.xz
+          mkdir -p /tmp/littlenet-expanded
+          tar -xJf /tmp/littlenet-source.tar.xz -C /tmp/littlenet-expanded
+          test -f /tmp/littlenet-expanded/app.py
+          test -f /tmp/littlenet-expanded/safety/policy.py
+          test -d /tmp/littlenet-expanded/android
+          test -d /tmp/littlenet-expanded/tests
+
+      - name: Replace bootstrap with actual source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rsync -a --delete --exclude='.git/' /tmp/littlenet-expanded/ ./
+          git config user.name "LittleNet Build"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Add complete sanitized LittleNet source"
+          git push origin main
